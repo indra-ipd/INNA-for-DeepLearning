@@ -119,10 +119,31 @@ class INNAOptimizer(optimizer.Optimizer):
     #Initialise v such that the initial speed is in the direction of -grad
     v_temp = cond( equal(num_iter(),0) ,
       lambda : (1.-alpha_t*beta_t) * var - beta_t**2 * grad + beta_t * speed_ini_t * grad, lambda : v )
+    '''
+    if k == 0:
+        v_temp = (1.-alpha_t*beta_t) * var - beta_t**2 * grad + beta_t * speed_ini_t * grad
+    else: 
+        v_temp = v
+    '''
 
     v_t = v.assign( v_temp - ( lr_t * decay_t / math_ops.pow(math_ops.cast(num_iter()+1, var.dtype.base_dtype),decaypower_t) ) * ( (alpha_t-1./beta_t) * var + 1./beta_t * v_temp ) )
    
+   '''
+   # ψ_kp1 = ψ_k + γk ( (1/β - α) θ_k - 1/β ψ_k )
+   # ψ_kp1 = ψ_k - γk ( (α - 1/β) θ_k + 1/β ψ_k )
+   
+    v = v_temp - ( lr_t * decay_t / math_ops.pow(math_ops.cast(num_iter()+1, var.dtype.base_dtype),decaypower_t) ) * ( (alpha_t-1./beta_t) * var + 1./beta_t * v_temp ) 
+    
+    '''
     var_update = state_ops.assign_sub( var, ( lr_t * decay_t / math_ops.pow(math_ops.cast(num_iter()+1, var.dtype.base_dtype),decaypower_t) ) * ( (alpha_t-1./beta_t) * var + 1./beta_t * v_temp + beta_t * grad ) ) #Update 'ref' by subtracting 'value
+    
+   '''
+    # θ_k = θ_k + γk ( (1/β - α) θ_k - 1/β ψ_k - βg)
+    # θ_k = θ_k - γk ( (α - 1/β ) θ_k + 1/β ψ_k + βg)
+    
+    var = var - ( lr_t * decay_t / math_ops.pow(math_ops.cast(num_iter()+1, var.dtype.base_dtype),decaypower_t) ) * ( (alpha_t-1./beta_t) * var + 1./beta_t * v_temp + beta_t * grad ) 
+    
+    '''
     
     return control_flow_ops.group(*[var_update, v_t])
 
